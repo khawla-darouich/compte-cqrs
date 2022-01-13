@@ -6,10 +6,16 @@ import org.axonframework.eventsourcing.EventSourcingHandler;
 import org.axonframework.modelling.command.AggregateIdentifier;
 import org.axonframework.modelling.command.AggregateLifecycle;
 import org.axonframework.spring.stereotype.Aggregate;
-import org.glsid3.comptecqrs.commandapi.AccountStatus;
+import org.glsid3.comptecqrs.commandapi.enums.AccountStatus;
 import org.glsid3.comptecqrs.commandapi.commands.CreateAccountCommand;
-import org.glsid3.comptecqrs.commandapi.events.AccountActivatedEventEvent;
+import org.glsid3.comptecqrs.commandapi.commands.CreditAccountCommand;
+import org.glsid3.comptecqrs.commandapi.commands.DebitAccountCommand;
+import org.glsid3.comptecqrs.commandapi.events.AccountActivatedEvent;
 import org.glsid3.comptecqrs.commandapi.events.AccountCreatedEvent;
+import org.glsid3.comptecqrs.commandapi.events.AccountCreditedEvent;
+import org.glsid3.comptecqrs.commandapi.events.AccountDebitedEvent;
+import org.glsid3.comptecqrs.commandapi.exceptions.AmmountNagativeException;
+import org.glsid3.comptecqrs.commandapi.exceptions.BalanceNotSufficientExcption;
 
 @Aggregate
 @NoArgsConstructor
@@ -27,8 +33,8 @@ public class AccountAggregate {
         AggregateLifecycle.apply(new AccountCreatedEvent(
                 createAccountCommand.getId(),
                 createAccountCommand.getInitialBalance(),
-                createAccountCommand.getCurrency()
-        ));
+                createAccountCommand.getCurrency(),
+                AccountStatus.CREATED));
     }
 
     @EventSourcingHandler
@@ -37,10 +43,47 @@ public class AccountAggregate {
         this.balance=accountCreatedEvent.getInitialBalance();
         this.status=AccountStatus.CREATED;
         this.accountId=accountCreatedEvent.getId();
-        AggregateLifecycle.apply(new AccountActivatedEventEvent(
+        AggregateLifecycle.apply(new AccountActivatedEvent(
                 accountCreatedEvent.getId(),
-                accountCreatedEvent.getInitialBalance(),
-                accountCreatedEvent.getCurrency()
+                accountCreatedEvent.getStatus()
         ));
+    }
+
+    @EventSourcingHandler
+    public void on(AccountActivatedEvent accountActivatedEventEvent)
+    {
+        //this.status=accountActivatedEventEvent.get
+        this.status=AccountStatus.ACTIVATED;
+    }
+
+    @CommandHandler
+    public void handle(CreditAccountCommand command) throws AmmountNagativeException {
+        if(command.getAmount()<0) throw  new AmmountNagativeException("Amount should not be negative");
+        AggregateLifecycle.apply(new AccountCreditedEvent(
+                command.getId(),
+                command.getAmount(),
+                command.getCurrency()
+        ));
+    }
+
+    @EventSourcingHandler
+    public void on(AccountCreditedEvent event){
+        this.balance+=event.getAmount();
+    }
+
+    @CommandHandler
+    public void handle(DebitAccountCommand command) throws BalanceNotSufficientExcption {
+        if(command.getAmount()<0) throw  new RuntimeException("Amount should not be negative");
+        if(this.balance<command.getAmount()) throw new BalanceNotSufficientExcption("Balance not sufficient");
+        AggregateLifecycle.apply(new AccountDebitedEvent(
+                command.getId(),
+                command.getAmount(),
+                command.getCurrency()
+        ));
+    }
+
+    @EventSourcingHandler
+    public void on(AccountDebitedEvent event){
+        this.balance+=event.getAmount();
     }
 }

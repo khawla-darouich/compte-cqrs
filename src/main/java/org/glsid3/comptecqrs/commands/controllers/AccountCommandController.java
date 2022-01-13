@@ -4,7 +4,11 @@ import lombok.AllArgsConstructor;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.axonframework.eventsourcing.eventstore.EventStore;
 import org.glsid3.comptecqrs.commandapi.DTO.CreateAccountRequestDTO;
+import org.glsid3.comptecqrs.commandapi.DTO.CreditAccountRequestDTO;
+import org.glsid3.comptecqrs.commandapi.DTO.DebitAccountRequestDTO;
 import org.glsid3.comptecqrs.commandapi.commands.CreateAccountCommand;
+import org.glsid3.comptecqrs.commandapi.commands.CreditAccountCommand;
+import org.glsid3.comptecqrs.commandapi.commands.DebitAccountCommand;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -30,8 +34,31 @@ public class AccountCommandController {
 
         return commandResponse;
     }
+
+    @PutMapping("/credit")
+    public CompletableFuture<String> creditAccount(@RequestBody CreditAccountRequestDTO request){
+        CompletableFuture<String> commandResponse = commandGateway.send(new CreditAccountCommand(
+                UUID.randomUUID().toString(),
+                request.getAmount(),
+                request.getCurrency()
+        ));
+
+        return commandResponse;
+    }
+
+    @PutMapping("/debit")
+    public CompletableFuture<String> debitAccount(@RequestBody DebitAccountRequestDTO request){
+        CompletableFuture<String> commandResponse = commandGateway.send(new DebitAccountCommand(
+                UUID.randomUUID().toString(),
+                request.getAmount(),
+                request.getCurrency()
+        ));
+
+        return commandResponse;
+    }
+
     @GetMapping("/eventStore/{accounId}")
-    public Stream eventStore(@PathVariable String accountId){
+    public Stream eventStore(@RequestParam  String accountId){
         return eventStore.readEvents(accountId).asStream();
     }
 

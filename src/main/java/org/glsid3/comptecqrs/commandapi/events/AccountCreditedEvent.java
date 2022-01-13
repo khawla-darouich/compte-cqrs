@@ -1,15 +1,15 @@
-package org.glsid3.comptecqrs.commandapi.commands;
+package org.glsid3.comptecqrs.commandapi.events;
 
 import lombok.Getter;
 
-public class DebitAccountCommand extends BaseCommand<String>{
-
+public class AccountCreditedEvent extends  BaseEvent<String>{
     @Getter
     private double amount;
     @Getter private String currency;
-    public DebitAccountCommand(String id, double amount, String currency) {
+    public AccountCreditedEvent(String id, double amount, String currency) {
         super(id);
         this.amount = amount;
         this.currency = currency;
     }
+
 }
